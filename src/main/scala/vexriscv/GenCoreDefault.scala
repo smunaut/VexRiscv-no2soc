@@ -19,10 +19,10 @@ object SpinalConfig extends spinal.core.SpinalConfig(
 
 case class ArgConfig(
   debug : Boolean = false,
-  iCacheSize : Int = 4096,
-  dCacheSize : Int = 4096,
-  mulDiv : Boolean = true,
-  singleCycleMulDiv : Boolean = true,
+  iCacheSize : Int = 1024,
+  dCacheSize : Int = 0,
+  mulDiv : Boolean = false,
+  singleCycleMulDiv : Boolean = false,
   singleCycleShift : Boolean = true,
   relaxedPcCalculation : Boolean = false,
   bypass : Boolean = true,
@@ -91,6 +91,8 @@ object GenCoreDefault{
             relaxedPcCalculation = argConfig.relaxedPcCalculation,
             prediction = argConfig.prediction,
             memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4),
+//            compressedGen = true,
+//            injectorStage = true,
             config = InstructionCacheConfig(
               cacheSize = argConfig.iCacheSize,
               bytePerLine = 32,
@@ -98,19 +100,20 @@ object GenCoreDefault{
               addressWidth = 32,
               cpuDataWidth = 32,
               memDataWidth = 32,
-              catchIllegalAccess = true,
-              catchAccessFault = true,
+              catchIllegalAccess = false,
+              catchAccessFault = false,
               asyncTagMemory = false,
               twoCycleRam = false,
               twoCycleCache = true
+//              twoCycleCache = false		// For compressed, need eithr injector, or set this to false
             )
           )
         },
 
         if(argConfig.dCacheSize <= 0){
           new DBusSimplePlugin(
-            catchAddressMisaligned = true,
-            catchAccessFault = true,
+            catchAddressMisaligned = false,
+            catchAccessFault = false,
             withLrSc = linux,
             memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4)
           )
@@ -127,9 +130,9 @@ object GenCoreDefault{
               addressWidth = 32,
               cpuDataWidth = 32,
               memDataWidth = 32,
-              catchAccessError = true,
-              catchIllegal = true,
-              catchUnaligned = true,
+              catchAccessError = false,
+              catchIllegal = false,
+              catchUnaligned = false,
               withLrSc = linux,
               withAmo = linux,
               earlyWaysHits = argConfig.dBusCachedEarlyWaysHits
@@ -144,10 +147,11 @@ object GenCoreDefault{
           ioRange      = _.msb
         ),
         new DecoderSimplePlugin(
-          catchIllegalInstruction = true
+          catchIllegalInstruction = false
         ),
         new RegFilePlugin(
           regFileReadyKind = plugin.SYNC,
+          withShadow  = true,
           zeroBoot = false
         ),
         new IntAluPlugin,
@@ -171,7 +175,7 @@ object GenCoreDefault{
         ),
         new BranchPlugin(
           earlyBranch = false,
-          catchAddressMisaligned = true
+          catchAddressMisaligned = false
         ),
         new CsrPlugin(
           argConfig.csrPluginConfig match {
@@ -231,7 +235,8 @@ object GenCoreDefault{
           }
           case plugin: IBusCachedPlugin => {
             plugin.iBus.setAsDirectionLess()
-            master(plugin.iBus.toWishbone()).setName("iBusWishbone")
+            //master(plugin.iBus.toWishbone()).setName("iBusWishbone")
+            master(plugin.iBus.toAxi4ReadOnly()).setName("iBusAXI")
           }
           case plugin: DBusSimplePlugin => {
             plugin.dBus.setAsDirectionLess()
