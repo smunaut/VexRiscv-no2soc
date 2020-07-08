@@ -14,10 +14,7 @@ object SpinalConfig extends spinal.core.SpinalConfig(
   defaultConfigForClockDomains = ClockDomainConfig(
     resetKind = spinal.core.SYNC
   )
-){
-  //Insert a compilation phase which will add a  (* ram_style = "block" *) on all synchronous rams.
-  phasesInserters += {(array) => array.insert(array.indexWhere(_.isInstanceOf[PhaseAllocateNames]) + 1, new ForceRamBlockPhase)}
-}
+)
 
 case class ArgConfig(
   debug : Boolean = false,
@@ -250,22 +247,4 @@ object GenCoreDefault{
       cpu
     }
   }
-}
-
-
-class ForceRamBlockPhase() extends spinal.core.internals.Phase{
-  override def impl(pc: PhaseContext): Unit = {
-    pc.walkBaseNodes{
-      case mem: Mem[_] => {
-        var asyncRead = false
-        mem.dlcForeach[MemPortStatement]{
-          case _ : MemReadAsync => asyncRead = true
-          case _ =>
-        }
-        if(!asyncRead) mem.addAttribute("ram_style", "block")
-      }
-      case _ =>
-    }
-  }
-  override def hasNetlistImpact: Boolean = false
 }
