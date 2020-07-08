@@ -12,8 +12,9 @@ import scala.collection.mutable.ArrayBuffer
 
 object SpinalConfig extends spinal.core.SpinalConfig(
   defaultConfigForClockDomains = ClockDomainConfig(
-    resetKind = spinal.core.SYNC
-  )
+    resetKind = spinal.core.ASYNC
+  ),
+  mergeAsyncProcess = false
 )
 
 case class ArgConfig(
