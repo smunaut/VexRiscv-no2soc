@@ -19,19 +19,19 @@ object SpinalConfig extends spinal.core.SpinalConfig(
 
 case class ArgConfig(
   debug : Boolean = false,
-  iCacheSize : Int = 1024,
+  iCacheSize : Int = 2048,
   dCacheSize : Int = 0,
   mulDiv : Boolean = false,
   singleCycleMulDiv : Boolean = false,
-  singleCycleShift : Boolean = true,
+  singleCycleShift : Boolean = false,
   relaxedPcCalculation : Boolean = false,
   bypass : Boolean = true,
   externalInterruptArray : Boolean = true,
   resetVector : BigInt = null,
   machineTrapVector : BigInt = null,
-  prediction : BranchPrediction = STATIC,
+  prediction : BranchPrediction = NONE,
   outputFile : String = "VexRiscv",
-  csrPluginConfig : String = "small",
+  csrPluginConfig : String = "linux-minimal",
   dBusCachedRelaxedMemoryTranslationRegister : Boolean = false,
   dBusCachedEarlyWaysHits : Boolean = true
 )
@@ -100,8 +100,8 @@ object GenCoreDefault{
               addressWidth = 32,
               cpuDataWidth = 32,
               memDataWidth = 32,
-              catchIllegalAccess = false,
-              catchAccessFault = false,
+              catchIllegalAccess = true,
+              catchAccessFault = true,
               asyncTagMemory = false,
               twoCycleRam = false,
               twoCycleCache = true
@@ -112,8 +112,8 @@ object GenCoreDefault{
 
         if(argConfig.dCacheSize <= 0){
           new DBusSimplePlugin(
-            catchAddressMisaligned = false,
-            catchAccessFault = false,
+            catchAddressMisaligned = true,
+            catchAccessFault = true,
             withLrSc = linux,
             memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4)
           )
@@ -130,9 +130,9 @@ object GenCoreDefault{
               addressWidth = 32,
               cpuDataWidth = 32,
               memDataWidth = 32,
-              catchAccessError = false,
-              catchIllegal = false,
-              catchUnaligned = false,
+              catchAccessError = true,
+              catchIllegal = true,
+              catchUnaligned = true,
               withLrSc = linux,
               withAmo = linux,
               earlyWaysHits = argConfig.dBusCachedEarlyWaysHits
@@ -142,12 +142,12 @@ object GenCoreDefault{
           )
         },
         if(linux) new MmuPlugin(
-          ioRange = (x => x(31 downto 28) === 0xB || x(31 downto 28) === 0xE || x(31 downto 28) === 0xF)
+          ioRange      = _.msb
         )  else new StaticMemoryTranslatorPlugin(
           ioRange      = _.msb
         ),
         new DecoderSimplePlugin(
-          catchIllegalInstruction = false
+          catchIllegalInstruction = true
         ),
         new RegFilePlugin(
           regFileReadyKind = plugin.SYNC,
